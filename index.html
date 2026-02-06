@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Face API from CDN - No need to download models -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header>
+            <h1><i class="fas fa-user-check"></i> Smart Attendance System</h1>
+            <div class="datetime" id="datetime">
+                <!-- Date and time will appear here -->
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
+            <!-- Left Panel: Registration -->
+            <div class="panel registration-panel">
+                <h2><i class="fas fa-user-plus"></i> Register New Student</h2>
+                
+                <div class="webcam-container">
+                    <video id="webcam" width="320" height="240" autoplay muted></video>
+                    <canvas id="overlay" width="320" height="240"></canvas>
+                    <div class="webcam-controls">
+                        <button id="captureBtn" class="btn btn-primary">
+                            <i class="fas fa-camera"></i> Capture Face
+                        </button>
+                        <button id="registerBtn" class="btn btn-success" disabled>
+                            <i class="fas fa-save"></i> Register Student
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="registration-form">
+                    <input type="text" id="studentId" placeholder="Student ID (e.g., S001)" required>
+                    <input type="text" id="studentName" placeholder="Full Name (e.g., John Doe)" required>
+                    <input type="text" id="studentCourse" placeholder="Course (e.g., Computer Science)" required>
+                    <div class="face-preview" id="facePreview">
+                        <i class="fas fa-user-circle" style="font-size: 50px; color: #ccc;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Attendance -->
+            <div class="panel attendance-panel">
+                <h2><i class="fas fa-clipboard-check"></i> Mark Attendance</h2>
+                
+                <div class="attendance-controls">
+                    <select id="subjectSelect" class="subject-select">
+                        <option value="mathematics">Mathematics</option>
+                        <option value="science">Science</option>
+                        <option value="english">English</option>
+                        <option value="history">History</option>
+                        <option value="computer">Computer Science</option>
+                    </select>
+                    
+                    <button id="startRecognition" class="btn btn-primary">
+                        <i class="fas fa-video"></i> Start Recognition
+                    </button>
+                    <button id="stopRecognition" class="btn btn-danger" disabled>
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                </div>
+                
+                <div class="recognition-status" id="recognitionStatus">
+                    <i class="fas fa-info-circle"></i> Ready to start face recognition
+                </div>
+                
+                <div class="attendance-list">
+                    <h3>Today's Attendance <span id="dateDisplay"></span></h3>
+                    <div class="table-container">
+                        <table id="attendanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceBody">
+                                <!-- Attendance rows will be added here by JavaScript -->
+                                <tr class="empty-row">
+                                    <td colspan="4" style="text-align: center; color: #999;">
+                                        No attendance marked yet
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panel: Student Database -->
+            <div class="panel database-panel">
+                <h2><i class="fas fa-database"></i> Student Database</h2>
+                
+                <div class="controls-row">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Search by ID, name, or course...">
+                    </div>
+                    <button id="exportBtn" class="btn btn-secondary">
+                        <i class="fas fa-file-export"></i> Export CSV
+                    </button>
+                    <button id="clearAllBtn" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Clear All Data
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table id="studentTable">
+                        <thead>
+                            <tr>
+                                <th width="80px">Photo</th>
+                                <th width="120px">Student ID</th>
+                                <th>Full Name</th>
+                                <th width="200px">Course</th>
+                                <th width="120px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentBody">
+                            <!-- Student rows will be added here by JavaScript -->
+                            <tr class="empty-row">
+                                <td colspan="5" style="text-align: center; color: #999; padding: 40px;">
+                                    <i class="fas fa-users" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                                    No students registered yet
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Students:</span>
+                    <span class="stat-value" id="totalStudents">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Present Today:</span>
+                    <span class="stat-value" id="presentToday">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Attendance Rate:</span>
+                    <span class="stat-value" id="attendanceRate">0%</span>
+                </div>
+            </div>
+            <p class="footer-note">
+                <i class="fas fa-info-circle"></i> All data is stored locally in your browser
+            </p>
+        </footer>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="attendanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle success-icon"></i> Attendance Marked!</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Student marked as present!</p>
+                <div class="modal-student-info">
+                    <div class="info-item">
+                        <span class="info-label">Student:</span>
+                        <span class="info-value" id="modalStudentName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Time:</span>
+                        <span class="info-value" id="modalTime">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Subject:</span>
+                        <span class="info-value" id="modalSubject">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="closeModal" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructionsModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-graduation-cap"></i> How to Use</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="instruction-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Register Students</h4>
+                        <p>Click "Capture Face" then fill student details and click "Register"</p>
+                    </div>
+                </div>
+                <div class="instruction-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Mark Attendance</h4>
+                        <p>Select subject, click "Start Recognition" - system will auto-detect faces</p>
+                    </div>
+                </div>
+                <div class="instruction-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>View Data</h4>
+                        <p>Check attendance records and student database. Export data as CSV if needed.</p>
+                    </div>
+                </div>
+                <div class="tip-box">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>Tip:</strong> Ensure good lighting and clear face view for better recognition
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="startTutorial" class="btn btn-primary">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
